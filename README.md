@@ -9,6 +9,8 @@ A simple tool to check who [un]follow you on twitter.
 ## Example
 `./go-odbye -nick dlion92`
 
+![screenshot](./screenshot.png)
+
 ## Config
 To use this tool you need to add your consumer and token key/secret. After that build your bin with `go build` and that's all!
 
