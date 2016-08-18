@@ -11,6 +11,10 @@ A simple tool to check who [un]follow you on twitter.
 
 ![screenshot](./screenshot.png)
 
+## Option
+`-nick <nick> Which user you want to track`   
+`-url <true|false> If you want to see complete url`
+
 ## Config
 To use this tool you need to add your consumer and token key/secret. After that build your bin with `go build` and that's all!
 

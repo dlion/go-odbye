@@ -31,6 +31,8 @@ func main() {
 	cursor = -1
 
 	nick := flag.String("nick", "dlion92", "your nickname on twitter")
+	url := flag.Bool("url", false, "true if you want to see the url in output")
+
 	flag.Parse()
 
 	db, err := sql.Open("sqlite3", fmt.Sprintf("%s/.goo.db", user.HomeDir))
@@ -209,6 +211,10 @@ func main() {
 		color.Unset()
 		color.Set(color.FgGreen)
 		for i := range followers {
+			if *url == true {
+				fmt.Printf("https://twitter.com/")
+			}
+
 			fmt.Printf("%s welcome!\n", followers[i])
 		}
 		color.Unset()
@@ -220,6 +226,9 @@ func main() {
 		color.Unset()
 		color.Set(color.FgHiRed)
 		for i := range unfollowers {
+			if *url == true {
+				fmt.Printf("https://twitter.com/")
+			}
 			fmt.Printf("%s goodbye!\n", unfollowers[i])
 		}
 		color.Unset()
