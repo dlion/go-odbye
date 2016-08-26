@@ -12,6 +12,11 @@ import (
 	"os/user"
 )
 
+type fUser struct {
+	id       int64
+	username string
+}
+
 func main() {
 	//User infos
 	user, err := user.Current()
@@ -73,7 +78,7 @@ func main() {
 		color.Unset()
 	}
 
-	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (username) VALUES(?)")
+	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (id, username) VALUES(?, ?)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
@@ -101,7 +106,7 @@ func main() {
 		}
 		//Put usernames in the db
 		for _, v := range followers.Users {
-			_, err = insertUsers.Exec(fmt.Sprintf("%s", v.ScreenName))
+			_, err = insertUsers.Exec(v.ID, fmt.Sprintf("%s", v.ScreenName))
 			if err != nil {
 				color.Set(color.FgRed, color.BlinkSlow)
 				log.Fatal(err)
@@ -115,8 +120,8 @@ func main() {
 	tx.Commit()
 
 	//Check new followers
-	var followers []string
-	rows, err := db.Query("SELECT username FROM usersTmp WHERE username NOT IN (SELECT username FROM users)")
+	var followers []fUser
+	rows, err := db.Query("SELECT id, username FROM usersTmp WHERE id NOT IN (SELECT id FROM users)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
@@ -126,18 +131,23 @@ func main() {
 
 	for rows.Next() {
 		var username string
-		err = rows.Scan(&username)
+		var id int64
+		err = rows.Scan(&id, &username)
 		if err != nil {
 			color.Set(color.FgRed, color.BlinkSlow)
 			log.Fatal(err)
 			color.Unset()
 		}
-		followers = append(followers, username)
+		u := fUser{
+			id:       id,
+			username: username,
+		}
+		followers = append(followers, u)
 	}
 
 	//Check new unfollowers
-	var unfollowers []string
-	rows, err = db.Query("SELECT username FROM users WHERE username NOT IN (SELECT username FROM usersTmp)")
+	var unfollowers []fUser
+	rows, err = db.Query("SELECT id, username FROM users WHERE id NOT IN (SELECT id FROM usersTmp)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
@@ -147,13 +157,18 @@ func main() {
 
 	for rows.Next() {
 		var username string
-		err = rows.Scan(&username)
+		var id int64
+		err = rows.Scan(&id, &username)
 		if err != nil {
 			color.Set(color.FgRed, color.BlinkSlow)
 			log.Fatal(err)
 			color.Unset()
 		}
-		unfollowers = append(unfollowers, username)
+		u := fUser{
+			id:       id,
+			username: username,
+		}
+		unfollowers = append(unfollowers, u)
 	}
 
 	//Delete all users to update the table
@@ -164,7 +179,7 @@ func main() {
 		color.Unset()
 	}
 	//Get all new followers
-	rowsN, err := db.Query("SELECT username FROM usersTmp")
+	rowsN, err := db.Query("SELECT id, username FROM usersTmp")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
@@ -176,7 +191,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	insertUsers, err = tx.Prepare("INSERT INTO users (username) VALUES(?)")
+	insertUsers, err = tx.Prepare("INSERT INTO users (id, username) VALUES(?, ?)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
@@ -185,12 +200,13 @@ func main() {
 
 	for rowsN.Next() {
 		var username string
-		err = rowsN.Scan(&username)
+		var id int64
+		err = rowsN.Scan(&id, &username)
 		if err != nil {
 			panic(err)
 		}
 
-		_, err = insertUsers.Exec(fmt.Sprintf("%s", username))
+		_, err = insertUsers.Exec(id, fmt.Sprintf("%s", username))
 		if err != nil {
 			color.Set(color.FgRed, color.BlinkSlow)
 			log.Fatal(err)
@@ -215,7 +231,7 @@ func main() {
 				fmt.Printf("https://twitter.com/")
 			}
 
-			fmt.Printf("%s welcome!\n", followers[i])
+			fmt.Printf("%s welcome!\n", followers[i].username)
 		}
 		color.Unset()
 	}
@@ -229,7 +245,7 @@ func main() {
 			if *url == true {
 				fmt.Printf("https://twitter.com/")
 			}
-			fmt.Printf("%s goodbye!\n", unfollowers[i])
+			fmt.Printf("%s goodbye!\n", unfollowers[i].username)
 		}
 		color.Unset()
 	}
