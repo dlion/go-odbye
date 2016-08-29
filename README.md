@@ -16,7 +16,15 @@ A simple tool to check who [un]follow you on twitter.
 `-url <true|false> If you want to see complete url`
 
 ## Config
-To use this tool you need to add your consumer and token key/secret. After that build your bin with `go build` and that's all!
+To use this tool you need to add your consumer and token key/secret in a json config file on your `$HOME` dir called `.goodbye.json`, here the structure:   
+```js
+{
+  "consumerKey": "<CONSUMER KEY>",
+  "consumerSecret": "<CONSUMER SECRET>",
+  "accessToken": "<ACCESS TOKEN>",
+  "accessSecret": "<ACCESS SECRET>"
+}
+```
 
 ## Consumer/Token
 You can obtain your consumer/token creating a new twitter application, see https://apps.twitter.com/ to more info.
