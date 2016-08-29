@@ -10,7 +10,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os/user"
-	"time"
 )
 
 type fUser struct {
@@ -24,7 +23,6 @@ func main() {
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	//Config
 	config := oauth1.NewConfig("<CONSUMER KEY>", "<CONSUMER SECRET>")
@@ -33,8 +31,7 @@ func main() {
 	//Client
 	client := twitter.NewClient(httpClient)
 	//Cursor
-	var cursor int64
-	cursor = -1
+	cursor := int64(-1)
 
 	nick := flag.String("nick", "dlion92", "your nickname on twitter")
 	url := flag.Bool("url", false, "true if you want to see the url in output")
@@ -45,20 +42,18 @@ func main() {
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	defer db.Close()
 
 	//Create a new db if not exists
 	newDB := `
-		CREATE TABLE IF NOT EXISTS users (id integer not null primary key, username text);
-		CREATE TABLE IF NOT EXISTS usersTmp (id integer not null primary key, username text);
+		CREATE TABLE IF NOT EXISTS users (id integer not null primary key, idUser integer, username text);
+		CREATE TABLE IF NOT EXISTS usersTmp (id integer not null primary key, idUser integer, username text);
 		`
 	_, err = db.Exec(newDB)
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 
 	//Delete usersTmp table
@@ -66,24 +61,20 @@ func main() {
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	//Count followers
-	var plus int64
-	plus = 0
+	plus := 0
 	//Begin
 	tx, err := db.Begin()
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 
-	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (id, username) VALUES(?, ?)")
+	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (idUser, username) VALUES(?, ?)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	defer insertUsers.Close()
 
@@ -102,8 +93,6 @@ func main() {
 			} else {
 				log.Fatal(err)
 			}
-			color.Unset()
-
 		}
 		//Put usernames in the db
 		for _, v := range followers.Users {
@@ -111,10 +100,8 @@ func main() {
 			if err != nil {
 				color.Set(color.FgRed, color.BlinkSlow)
 				log.Fatal(err)
-				color.Unset()
 			}
 			plus++
-			time.Sleep(10 * time.Millisecond)
 		}
 		//Next Follower
 		cursor = followers.NextCursor
@@ -123,11 +110,10 @@ func main() {
 
 	//Check new followers
 	var followers []fUser
-	rows, err := db.Query("SELECT id, username FROM usersTmp WHERE id NOT IN (SELECT id FROM users)")
+	rows, err := db.Query("SELECT idUser, username FROM usersTmp WHERE idUser NOT IN (SELECT idUser FROM users)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	defer rows.Close()
 
@@ -138,7 +124,6 @@ func main() {
 		if err != nil {
 			color.Set(color.FgRed, color.BlinkSlow)
 			log.Fatal(err)
-			color.Unset()
 		}
 		u := fUser{
 			id:       id,
@@ -149,11 +134,10 @@ func main() {
 
 	//Check new unfollowers
 	var unfollowers []fUser
-	rows, err = db.Query("SELECT id, username FROM users WHERE id NOT IN (SELECT id FROM usersTmp)")
+	rows, err = db.Query("SELECT idUser, username FROM users WHERE idUser NOT IN (SELECT idUser FROM usersTmp)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	defer rows.Close()
 
@@ -164,7 +148,6 @@ func main() {
 		if err != nil {
 			color.Set(color.FgRed, color.BlinkSlow)
 			log.Fatal(err)
-			color.Unset()
 		}
 		u := fUser{
 			id:       id,
@@ -178,26 +161,24 @@ func main() {
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	//Get all new followers
-	rowsN, err := db.Query("SELECT id, username FROM usersTmp")
+	rowsN, err := db.Query("SELECT idUser, username FROM usersTmp")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 	defer rowsN.Close()
 
 	tx, err = db.Begin()
 	if err != nil {
-		panic(err)
+		color.Set(color.FgRed, color.BlinkSlow)
+		log.Fatal(err)
 	}
-	insertUsers, err = tx.Prepare("INSERT INTO users (id, username) VALUES(?, ?)")
+	insertUsers, err = tx.Prepare("INSERT INTO users (idUser, username) VALUES(?, ?)")
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
-		color.Unset()
 	}
 
 	for rowsN.Next() {
@@ -212,7 +193,6 @@ func main() {
 		if err != nil {
 			color.Set(color.FgRed, color.BlinkSlow)
 			log.Fatal(err)
-			color.Unset()
 		}
 	}
 	tx.Commit()
@@ -229,7 +209,7 @@ func main() {
 		color.Unset()
 		color.Set(color.FgGreen)
 		for i := range followers {
-			if *url == true {
+			if *url {
 				fmt.Printf("https://twitter.com/")
 			}
 
@@ -244,7 +224,7 @@ func main() {
 		color.Unset()
 		color.Set(color.FgHiRed)
 		for i := range unfollowers {
-			if *url == true {
+			if *url {
 				fmt.Printf("https://twitter.com/")
 			}
 			fmt.Printf("%s goodbye!\n", unfollowers[i].username)
