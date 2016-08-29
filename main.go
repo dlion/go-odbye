@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os/user"
+	"path/filepath"
 )
 
 type fUser struct {
@@ -35,7 +36,7 @@ func main() {
 	}
 
 	//Config
-	file, err := ioutil.ReadFile(fmt.Sprintf("%s/.goodbye.json", user.HomeDir))
+	file, err := ioutil.ReadFile(filepath.Join(user.HomeDir, ".goodbye.json"))
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
@@ -60,7 +61,7 @@ func main() {
 
 	flag.Parse()
 
-	db, err := sql.Open("sqlite3", fmt.Sprintf("%s/.goo.db", user.HomeDir))
+	db, err := sql.Open("sqlite3", filepath.Join(user.HomeDir, ".goo.db"))
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
