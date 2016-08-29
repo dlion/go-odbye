@@ -2,12 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
+	"io/ioutil"
 	"log"
 	"os/user"
 )
@@ -17,6 +19,13 @@ type fUser struct {
 	username string
 }
 
+type Conf struct {
+	ConsumerKey    string `json:"consumerKey"`
+	ConsumerSecret string `json:"consumerSecret"`
+	AccessToken    string `json:"accessToken"`
+	AccessSecret   string `json:"accessSecret"`
+}
+
 func main() {
 	//User infos
 	user, err := user.Current()
@@ -24,9 +33,22 @@ func main() {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
+
 	//Config
-	config := oauth1.NewConfig("<CONSUMER KEY>", "<CONSUMER SECRET>")
-	token := oauth1.NewToken("<ACCESS TOKEN>", "<ACCESS SECRET>")
+	file, err := ioutil.ReadFile(fmt.Sprintf("%s/.goodbye.json", user.HomeDir))
+	if err != nil {
+		color.Set(color.FgRed, color.BlinkSlow)
+		log.Fatal(err)
+	}
+
+	var configuration Conf
+	err = json.Unmarshal(file, &configuration)
+	if err != nil {
+		color.Set(color.FgRed, color.BlinkSlow)
+		log.Fatal(err)
+	}
+	config := oauth1.NewConfig(configuration.ConsumerKey, configuration.ConsumerSecret)
+	token := oauth1.NewToken(configuration.AccessToken, configuration.AccessSecret)
 	httpClient := config.Client(oauth1.NoContext, token)
 	//Client
 	client := twitter.NewClient(httpClient)
