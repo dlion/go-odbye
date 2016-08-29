@@ -10,6 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os/user"
+	"time"
 )
 
 type fUser struct {
@@ -113,6 +114,7 @@ func main() {
 				color.Unset()
 			}
 			plus++
+			time.Sleep(10 * time.Millisecond)
 		}
 		//Next Follower
 		cursor = followers.NextCursor
