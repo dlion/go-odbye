@@ -9,9 +9,9 @@ import (
 	"github.com/dghubble/oauth1"
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
+	homedir "github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"log"
-	"os/user"
 	"path/filepath"
 )
 
@@ -28,15 +28,14 @@ type Conf struct {
 }
 
 func main() {
-	//User infos
-	user, err := user.Current()
+	homedir, err := homedir.Dir()
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	//Config
-	file, err := ioutil.ReadFile(filepath.Join(user.HomeDir, ".goodbye.json"))
+	file, err := ioutil.ReadFile(filepath.Join(homedir, ".goodbye.json"))
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
@@ -61,7 +60,7 @@ func main() {
 
 	flag.Parse()
 
-	db, err := sql.Open("sqlite3", filepath.Join(user.HomeDir, ".goo.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(homedir, ".goo.db"))
 	if err != nil {
 		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
