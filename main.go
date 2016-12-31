@@ -107,7 +107,7 @@ func main() {
 	// Get Followers
 	for cursor != 0 {
 		//dlion92 followers for now
-		io := &twitter.FollowerListParams{ScreenName: *nick, Cursor: int(cursor), Count: 200}
+		io := &twitter.FollowerListParams{ScreenName: *nick, Cursor: int64(cursor), Count: 200}
 		followers, resp, err := client.Followers.List(io)
 		if err != nil || resp.StatusCode != 200 {
 			color.Set(color.FgRed, color.BlinkSlow)
