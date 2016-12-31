@@ -21,6 +21,7 @@ type fUser struct {
 }
 
 type Conf struct {
+	Nick           string `json:"nick,omitempty"`
 	ConsumerKey    string `json:"consumerKey"`
 	ConsumerSecret string `json:"consumerSecret"`
 	AccessToken    string `json:"accessToken"`
@@ -55,7 +56,12 @@ func main() {
 	//Cursor
 	cursor := int64(-1)
 
-	nick := flag.String("nick", "dlion92", "your nickname on twitter")
+	defaultNick := "dlion92"
+	if configuration.Nick != "" {
+		defaultNick = configuration.Nick
+	}
+
+	nick := flag.String("nick", defaultNick, "your nickname on twitter")
 	url := flag.Bool("url", false, "true if you want to see the url in output")
 
 	flag.Parse()
