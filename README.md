@@ -29,6 +29,14 @@ To use this tool you need to add your consumer and token key/secret in a json co
 }
 ```
 
+You can also optionally set your default nick in the config file
+```js
+{
+  "nick": "<yournick>",
+  // …
+}
+```
+
 ## Consumer/Token
 You can obtain your consumer/token creating a new twitter application, see https://apps.twitter.com/ to more info.
 
