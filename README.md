@@ -4,7 +4,12 @@ Goodbye unfollowers!
 A simple tool to check who [un]follow you on twitter.
 
 ## Dependencies
-To use this tool you need to resolve some dependencies like go-twitter, oauth1, color and go-sqlite3, to do this enter on the directory `cd go-odbye` and type `go get`.
+To use this tool you need to resolve some dependencies like go-twitter, oauth1, color and go-sqlite3, to do this enter on the directory `cd $GOPATH/src/go-odbye` and type `go get`.
+
+If you run into trouble, this is commonly an error pertaining to `int()` or `int64()`, you should update your go dependancies with `go get -u`.
+
+## Building
+In the folder `$GOPATH/src/go-odbye` you need to run `go build` to compile the binary `go-odbye`.
 
 ## Usage
 `./go-odbye -nick <yournick>`
