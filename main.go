@@ -117,7 +117,7 @@ func main() {
 		}
 		//Put usernames in the db
 		for _, v := range followers.Users {
-			_, err = insertUsers.Exec(v.ID, fmt.Sprintf("%s", v.ScreenName))
+			_, err = insertUsers.Exec(v.ID, v.ScreenName)
 			if err != nil {
 				color.Set(color.FgRed, color.BlinkSlow)
 				log.Fatal(err)
@@ -204,7 +204,7 @@ func main() {
 			panic(err)
 		}
 
-		_, err = insertUsers.Exec(id, fmt.Sprintf("%s", username))
+		_, err = insertUsers.Exec(id, username)
 		if err != nil {
 			color.Set(color.FgRed, color.BlinkSlow)
 			log.Fatal(err)
