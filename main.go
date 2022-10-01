@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
@@ -72,8 +73,11 @@ func main() {
 
 	//Create a new db if not exists
 	newDB := `
-		CREATE TABLE IF NOT EXISTS users (id integer not null primary key, idUser integer, username text);
-		CREATE TABLE IF NOT EXISTS usersTmp (id integer not null primary key, idUser integer, username text);
+		CREATE TABLE IF NOT EXISTS users (id integer not null primary key, idUser integer, username text, firstSeen integer);
+		CREATE UNIQUE INDEX IF NOT EXISTS "idUser_idx" ON "users" ("idUser");
+
+		CREATE TABLE IF NOT EXISTS usersTmp (id integer not null primary key, idUser integer, username text, firstSeen integer);
+		CREATE UNIQUE INDEX IF NOT EXISTS "idUser_idx_tmp" ON "usersTmp" ("idUser");
 		`
 	_, err = db.Exec(newDB)
 	if err != nil {
@@ -93,7 +97,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (idUser, username) VALUES(?, ?)")
+	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (idUser, username, firstSeen) VALUES(?, ?, ?)")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +121,7 @@ func main() {
 		}
 		//Put usernames in the db
 		for _, v := range followers.Users {
-			_, err = insertUsers.Exec(v.ID, v.ScreenName)
+			_, err = insertUsers.Exec(v.ID, v.ScreenName, time.Now().Unix())
 			if err != nil {
 				color.Set(color.FgRed, color.BlinkSlow)
 				log.Fatal(err)
