@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"path/filepath"
+
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
 	homedir "github.com/mitchellh/go-homedir"
-	"io/ioutil"
-	"log"
-	"path/filepath"
 )
 
 type fUser struct {
@@ -31,21 +32,18 @@ type Conf struct {
 func main() {
 	homedir, err := homedir.Dir()
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	//Config
 	file, err := ioutil.ReadFile(filepath.Join(homedir, ".goodbye.json"))
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	var configuration Conf
 	err = json.Unmarshal(file, &configuration)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	config := oauth1.NewConfig(configuration.ConsumerKey, configuration.ConsumerSecret)
@@ -68,7 +66,6 @@ func main() {
 
 	db, err := sql.Open("sqlite3", filepath.Join(homedir, ".goo.db"))
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	defer db.Close()
@@ -80,14 +77,12 @@ func main() {
 		`
 	_, err = db.Exec(newDB)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	//Delete usersTmp table
 	_, err = db.Exec(`DELETE FROM usersTmp`)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	//Count followers
@@ -95,13 +90,11 @@ func main() {
 	//Begin
 	tx, err := db.Begin()
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (idUser, username) VALUES(?, ?)")
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	defer insertUsers.Close()
@@ -140,7 +133,6 @@ func main() {
 	var followers []fUser
 	rows, err := db.Query("SELECT idUser, username FROM usersTmp WHERE idUser NOT IN (SELECT idUser FROM users)")
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	defer rows.Close()
@@ -164,7 +156,6 @@ func main() {
 	var unfollowers []fUser
 	rows, err = db.Query("SELECT idUser, username FROM users WHERE idUser NOT IN (SELECT idUser FROM usersTmp)")
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	defer rows.Close()
@@ -187,25 +178,21 @@ func main() {
 	//Delete all users to update the table
 	_, err = db.Exec("DELETE FROM users")
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	//Get all new followers
 	rowsN, err := db.Query("SELECT idUser, username FROM usersTmp")
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	defer rowsN.Close()
 
 	tx, err = db.Begin()
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	insertUsers, err = tx.Prepare("INSERT INTO users (idUser, username) VALUES(?, ?)")
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
