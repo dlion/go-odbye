@@ -31,13 +31,13 @@ type Conf struct {
 }
 
 func main() {
-	homedir, err := homedir.Dir()
+	home, err := homedir.Dir()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//Config
-	file, err := ioutil.ReadFile(filepath.Join(homedir, ".goodbye.json"))
+	file, err := ioutil.ReadFile(filepath.Join(home, ".goodbye.json"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func main() {
 
 	flag.Parse()
 
-	db, err := sql.Open("sqlite3", filepath.Join(homedir, ".goo.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(home, ".goo.db"))
 	if err != nil {
 		log.Fatal(err)
 	}
