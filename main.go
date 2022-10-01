@@ -61,7 +61,7 @@ func main() {
 	}
 
 	nick := flag.String("nick", defaultNick, "your nickname on twitter")
-	url := flag.Bool("url", false, "true if you want to see the url in output")
+	url := flag.Bool("url", true, "true if you want to see the url in output")
 
 	flag.Parse()
 
