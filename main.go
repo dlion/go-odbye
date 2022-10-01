@@ -52,8 +52,6 @@ func main() {
 	httpClient := config.Client(oauth1.NoContext, token)
 	//Client
 	client := twitter.NewClient(httpClient)
-	//Cursor
-	cursor := int64(-1)
 
 	defaultNick := "dlion92"
 	if configuration.Nick != "" {
@@ -106,6 +104,9 @@ func main() {
 	color.Set(color.FgYellow)
 	fmt.Println("Getting followers, please wait...")
 	color.Unset()
+
+	//Cursor
+	var cursor int64 = -1
 	// Get Followers
 	for cursor != 0 {
 		//dlion92 followers for now
@@ -131,7 +132,10 @@ func main() {
 		//Next Follower
 		cursor = followers.NextCursor
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	//Check new followers
 	var followers []fUser
@@ -214,7 +218,10 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	db.Close()
 
