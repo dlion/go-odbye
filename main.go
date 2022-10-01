@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	//Config
-	file, err := ioutil.ReadFile(filepath.Join(home, ".goodbye.json"))
+	file, err := os.ReadFile(filepath.Join(home, ".goodbye.json"))
 	if err != nil {
 		log.Fatal(err)
 	}
