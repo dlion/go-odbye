@@ -13,8 +13,8 @@ import (
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/fatih/color"
+	"github.com/kirsle/configdir"
 	_ "github.com/mattn/go-sqlite3"
-	homedir "github.com/mitchellh/go-homedir"
 )
 
 type fUser struct {
@@ -32,13 +32,14 @@ type Conf struct {
 }
 
 func main() {
-	home, err := homedir.Dir()
+	configPath := configdir.LocalConfig("go-odbye")
+	err := configdir.MakePath(configPath) // Ensure it exists.
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	//Config
-	file, err := os.ReadFile(filepath.Join(home, ".goodbye.json"))
+	file, err := os.ReadFile(filepath.Join(configPath, "goodbye.json"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,7 +61,7 @@ func main() {
 
 	flag.Parse()
 
-	db, err := sql.Open("sqlite3", filepath.Join(home, ".goo.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(configPath, "goo.db"))
 	if err != nil {
 		log.Fatal(err)
 	}

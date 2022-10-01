@@ -6,8 +6,8 @@ require (
 	github.com/dghubble/go-twitter v0.0.0-20220816163853-8a0df96f1e6d
 	github.com/dghubble/oauth1 v0.7.1
 	github.com/fatih/color v1.13.0
+	github.com/kirsle/configdir v0.0.0-20170128060238-e45d2f54772f
 	github.com/mattn/go-sqlite3 v1.14.15
-	github.com/mitchellh/go-homedir v1.1.0
 )
 
 require (
