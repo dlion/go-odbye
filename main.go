@@ -5,19 +5,22 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"time"
+
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/fatih/color"
+	"github.com/kirsle/configdir"
 	_ "github.com/mattn/go-sqlite3"
-	homedir "github.com/mitchellh/go-homedir"
-	"io/ioutil"
-	"log"
-	"path/filepath"
 )
 
 type fUser struct {
-	id       int64
-	username string
+	id        int64
+	username  string
+	firstSeen *time.Time
 }
 
 type Conf struct {
@@ -29,32 +32,24 @@ type Conf struct {
 }
 
 func main() {
-	homedir, err := homedir.Dir()
+	configPath := configdir.LocalConfig("go-odbye")
+	err := configdir.MakePath(configPath) // Ensure it exists.
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	//Config
-	file, err := ioutil.ReadFile(filepath.Join(homedir, ".goodbye.json"))
+	file, err := os.ReadFile(filepath.Join(configPath, "goodbye.json"))
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	var configuration Conf
 	err = json.Unmarshal(file, &configuration)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
-	config := oauth1.NewConfig(configuration.ConsumerKey, configuration.ConsumerSecret)
-	token := oauth1.NewToken(configuration.AccessToken, configuration.AccessSecret)
-	httpClient := config.Client(oauth1.NoContext, token)
-	//Client
-	client := twitter.NewClient(httpClient)
-	//Cursor
-	cursor := int64(-1)
+	client := getTwitterClient(configuration)
 
 	defaultNick := "dlion92"
 	if configuration.Nick != "" {
@@ -62,46 +57,43 @@ func main() {
 	}
 
 	nick := flag.String("nick", defaultNick, "your nickname on twitter")
-	url := flag.Bool("url", false, "true if you want to see the url in output")
+	url := flag.Bool("url", true, "true if you want to see the url in output")
 
 	flag.Parse()
 
-	db, err := sql.Open("sqlite3", filepath.Join(homedir, ".goo.db"))
+	db, err := sql.Open("sqlite3", filepath.Join(configPath, "goo.db"))
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 	defer db.Close()
 
 	//Create a new db if not exists
 	newDB := `
-		CREATE TABLE IF NOT EXISTS users (id integer not null primary key, idUser integer, username text);
-		CREATE TABLE IF NOT EXISTS usersTmp (id integer not null primary key, idUser integer, username text);
+		CREATE TABLE IF NOT EXISTS users (id integer not null primary key, idUser integer, username text, firstSeen integer);
+		CREATE UNIQUE INDEX IF NOT EXISTS "idUser_idx" ON "users" ("idUser");
+
+		CREATE TABLE IF NOT EXISTS usersTmp (id integer not null primary key, idUser integer, username text, firstSeen integer);
+		CREATE UNIQUE INDEX IF NOT EXISTS "idUser_idx_tmp" ON "usersTmp" ("idUser");
 		`
 	_, err = db.Exec(newDB)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
 	//Delete usersTmp table
 	_, err = db.Exec(`DELETE FROM usersTmp`)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
-		log.Fatal(err)
-	}
-	//Count followers
-	plus := 0
-	//Begin
-	tx, err := db.Begin()
-	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
-	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (idUser, username) VALUES(?, ?)")
+	//Begin
+	tx, err := db.Begin()
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
+		log.Fatal(err)
+	}
+
+	insertUsers, err := tx.Prepare("INSERT INTO usersTmp (idUser, username, firstSeen) VALUES(?, ?, ?)")
+	if err != nil {
 		log.Fatal(err)
 	}
 	defer insertUsers.Close()
@@ -109,13 +101,17 @@ func main() {
 	color.Set(color.FgYellow)
 	fmt.Println("Getting followers, please wait...")
 	color.Unset()
+
+	//Count followers
+	plus := 0
+	//Cursor
+	var cursor int64 = -1
 	// Get Followers
 	for cursor != 0 {
 		//dlion92 followers for now
 		io := &twitter.FollowerListParams{ScreenName: *nick, Cursor: int64(cursor), Count: 200}
 		followers, resp, err := client.Followers.List(io)
 		if err != nil || resp.StatusCode != 200 {
-			color.Set(color.FgRed, color.BlinkSlow)
 			if resp.StatusCode == 429 { //
 				log.Fatal("Too much requests in a short period, try again after some minutes (15 minutes should be fine)")
 			} else {
@@ -124,9 +120,8 @@ func main() {
 		}
 		//Put usernames in the db
 		for _, v := range followers.Users {
-			_, err = insertUsers.Exec(v.ID, fmt.Sprintf("%s", v.ScreenName))
+			_, err = insertUsers.Exec(v.ID, v.ScreenName, time.Now().Unix())
 			if err != nil {
-				color.Set(color.FgRed, color.BlinkSlow)
 				log.Fatal(err)
 			}
 			plus++
@@ -134,96 +129,40 @@ func main() {
 		//Next Follower
 		cursor = followers.NextCursor
 	}
-	tx.Commit()
-
-	//Check new followers
-	var followers []fUser
-	rows, err := db.Query("SELECT idUser, username FROM usersTmp WHERE idUser NOT IN (SELECT idUser FROM users)")
+	err = tx.Commit()
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var username string
-		var id int64
-		err = rows.Scan(&id, &username)
-		if err != nil {
-			color.Set(color.FgRed, color.BlinkSlow)
-			log.Fatal(err)
-		}
-		u := fUser{
-			id:       id,
-			username: username,
-		}
-		followers = append(followers, u)
-	}
-
-	//Check new unfollowers
-	var unfollowers []fUser
-	rows, err = db.Query("SELECT idUser, username FROM users WHERE idUser NOT IN (SELECT idUser FROM usersTmp)")
+	followers, err := getNewFollowers(db)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var username string
-		var id int64
-		err = rows.Scan(&id, &username)
-		if err != nil {
-			color.Set(color.FgRed, color.BlinkSlow)
-			log.Fatal(err)
-		}
-		u := fUser{
-			id:       id,
-			username: username,
-		}
-		unfollowers = append(unfollowers, u)
-	}
-
-	//Delete all users to update the table
-	_, err = db.Exec("DELETE FROM users")
+	unfollowers, err := getUnfollowers(db)
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
-	//Get all new followers
-	rowsN, err := db.Query("SELECT idUser, username FROM usersTmp")
-	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
-		log.Fatal(err)
-	}
-	defer rowsN.Close()
 
 	tx, err = db.Begin()
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
-	insertUsers, err = tx.Prepare("INSERT INTO users (idUser, username) VALUES(?, ?)")
+
+	_, err = tx.Exec("INSERT OR IGNORE INTO users SELECT * FROM usersTmp")
 	if err != nil {
-		color.Set(color.FgRed, color.BlinkSlow)
 		log.Fatal(err)
 	}
 
-	for rowsN.Next() {
-		var username string
-		var id int64
-		err = rowsN.Scan(&id, &username)
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = insertUsers.Exec(id, fmt.Sprintf("%s", username))
-		if err != nil {
-			color.Set(color.FgRed, color.BlinkSlow)
-			log.Fatal(err)
-		}
+	_, err = tx.Exec("DELETE FROM users WHERE idUser NOT IN (SELECT idUser FROM usersTmp)")
+	if err != nil {
+		log.Fatal(err)
 	}
-	tx.Commit()
+
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	db.Close()
 
@@ -251,11 +190,15 @@ func main() {
 		fmt.Printf("%s has %d new unfollowers! :(\n", *nick, len(unfollowers))
 		color.Unset()
 		color.Set(color.FgHiRed)
-		for i := range unfollowers {
+		for _, f := range unfollowers {
 			if *url {
 				fmt.Printf("https://twitter.com/")
 			}
-			fmt.Printf("%s goodbye!\n", unfollowers[i].username)
+			fmt.Printf("%s goodbye!", f.username)
+			if f.firstSeen != nil {
+				fmt.Printf(" Followed since %s", f.firstSeen.Format(time.RFC822))
+			}
+			fmt.Println()
 		}
 		color.Unset()
 	}
@@ -265,4 +208,66 @@ func main() {
 		fmt.Printf("%s has no new followers or unfollowers, bye!\n", *nick)
 		color.Unset()
 	}
+}
+
+func getUnfollowers(db *sql.DB) ([]fUser, error) {
+	//Check new unfollowers
+	var unfollowers []fUser
+	rows, err := db.Query("SELECT idUser, username, firstSeen FROM users WHERE idUser NOT IN (SELECT idUser FROM usersTmp)")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t *int64
+		u := fUser{}
+		err = rows.Scan(&u.id, &u.username, &t)
+		if err != nil {
+			return nil, err
+		}
+
+		if t != nil {
+			x := time.Unix(*t, 0)
+			u.firstSeen = &x
+		}
+
+		unfollowers = append(unfollowers, u)
+	}
+	return unfollowers, err
+}
+
+func getNewFollowers(db *sql.DB) ([]fUser, error) {
+	//Check new followers
+	var followers []fUser
+	rows, err := db.Query("SELECT idUser, username, firstSeen FROM usersTmp WHERE idUser NOT IN (SELECT idUser FROM users)")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t *int64
+		u := fUser{}
+		err = rows.Scan(&u.id, &u.username, &t)
+		if err != nil {
+			return nil, err
+		}
+
+		if t != nil {
+			x := time.Unix(*t, 0)
+			u.firstSeen = &x
+		}
+
+		followers = append(followers, u)
+	}
+	return followers, err
+}
+
+func getTwitterClient(configuration Conf) *twitter.Client {
+	config := oauth1.NewConfig(configuration.ConsumerKey, configuration.ConsumerSecret)
+	token := oauth1.NewToken(configuration.AccessToken, configuration.AccessSecret)
+	httpClient := config.Client(oauth1.NoContext, token)
+	//Client
+	return twitter.NewClient(httpClient)
 }
