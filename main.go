@@ -149,7 +149,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = tx.Exec("INSERT OR IGNORE INTO users SELECT * FROM usersTmp")
+	_, err = tx.Exec("INSERT OR IGNORE INTO users (idUser, username, firstSeen) SELECT idUser, username, firstSeen FROM usersTmp")
 	if err != nil {
 		log.Fatal(err)
 	}
